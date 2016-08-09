@@ -4,7 +4,7 @@
         "vlucas/phpdotenv": "^2.3",
         "guzzlehttp/guzzle": "^6.2",
         "tedivm/stash": "^0.14.1",
-        "nesbot/carbon": "^1.21"
+        "cakephp/chronos": "^0.4.11"
     },
     "require-dev": {
         "symfony/var-dumper": "^3.1"

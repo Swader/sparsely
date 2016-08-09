@@ -2,7 +2,7 @@
 
 namespace sparsely;
 
-use Carbon\Carbon;
+use Cake\Chronos\Chronos;
 use GuzzleHttp\Client;
 use Psr\Cache\CacheItemPoolInterface;
 
@@ -44,7 +44,7 @@ class Post
         $this->secret = $secret;
     }
 
-    public function getPublishedDate() : Carbon
+    public function getPublishedDate() : Chronos
     {
         $hash = md5($this->url . '-pubdatehash');
 
@@ -59,15 +59,14 @@ class Post
 
         $data = $item->get();
 
-        return Carbon::createFromFormat(
+        return Chronos::createFromFormat(
             'Y-m-d H:i:s', str_replace("T", " ", $data)
         );
     }
 
-    private function getFirstMonthDate() : Carbon
+    private function getFirstMonthDate() : Chronos
     {
-        $new = clone $this->getPublishedDate();
-
+        $new = $this->getPublishedDate();
         return $new->addMonth();
     }
 
@@ -100,6 +99,38 @@ class Post
         return $decoded;
     }
 
+    private function fetchAsync(array $data = [])
+    {
+        $merged = array_merge(
+            $data, [
+                'apikey' => $this->apiKey,
+                'secret' => $this->secret,
+                'url' => $this->url,
+            ]
+        );
+
+        $promise = $this->client->getAsync(
+            '', [
+                'query' => $merged,
+            ]
+        );
+
+        return $promise->then(function ($response) {
+            $body = $response->getBody();
+            $bodyContents = $body->getContents();
+            $decoded = json_decode($bodyContents, true);
+
+            if (empty($decoded['data'])) {
+                throw new \Exception(
+                    "Data is empty - did you pass in a valid URL?"
+                );
+            }
+
+            return $decoded;
+        });
+
+    }
+
     public function getFirstMonthTraffic() : int
     {
         $pubDate = $this->getPublishedDate();
@@ -122,6 +153,36 @@ class Post
                 $item->expiresAfter(self::DAY);
             }
 
+            $this->cache->save($item);
+        }
+
+        $data = $item->get();
+
+        return (int)$data;
+    }
+
+    public function getTotalTraffic() : int
+    {
+        $pubDate = $this->getPublishedDate();
+        $hash = md5($this->url . '-total');
+
+        if ($pubDate->addMonth()->isFuture()) {
+            return 0;
+        }
+
+        $item = $this->cache->getItem($hash);
+
+        if (!$item->isHit() || self::CACHING === false) {
+            $params = [
+                'period_start' => $pubDate->toDateString(),
+                'period_end' => Chronos::now()->toDateString(),
+            ];
+            $response = $this->fetch($params);
+
+            $data = $response['data'][0]['_hits'];
+            $item->set($data);
+
+            $item->expiresAfter(self::DAY);
             $this->cache->save($item);
         }
 
