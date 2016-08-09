@@ -11,7 +11,7 @@ class Post
     /** day in seconds */
     const DAY = 86400;
 
-    const CACHING = false;
+    const CACHING = true;
 
     /** @var string */
     private $url;
