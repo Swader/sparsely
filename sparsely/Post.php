@@ -11,7 +11,7 @@ class Post
     /** day in seconds */
     const DAY = 86400;
 
-    const CACHING = true;
+    const CACHING = false;
 
     /** @var string */
     private $url;
@@ -73,15 +73,17 @@ class Post
 
     private function fetch(array $data = [])
     {
+        $merged = array_merge(
+            $data, [
+                'apikey' => $this->apiKey,
+                'secret' => $this->secret,
+                'url' => $this->url,
+            ]
+        );
+
         $r = $this->client->get(
             '', [
-                'query' => array_merge(
-                    $data, [
-                        'apikey' => $this->apiKey,
-                        'secret' => $this->secret,
-                        'url' => $this->url,
-                    ]
-                ),
+                'query' => $merged,
             ]
         );
 
@@ -108,8 +110,8 @@ class Post
         $item = $this->cache->getItem($hash);
         if (!$item->isHit() || self::CACHING === false) {
             $params = [
-                'period_start' => $pubDate,
-                'period_end' => $firstMonth,
+                'period_start' => $pubDate->toDateString(),
+                'period_end' => $firstMonth->toDateString(),
             ];
             $response = $this->fetch($params);
 
