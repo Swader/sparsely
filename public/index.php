@@ -2,7 +2,6 @@
 
 use Dotenv\Dotenv;
 use GuzzleHttp\Client;
-use GuzzleHttp\Promise;
 use sparsely\Output;
 use sparsely\Post;
 use Stash\Driver\Memcache;
@@ -15,6 +14,10 @@ $dotenv->load();
 
 $apikey = getenv('API_KEY');
 $secret = getenv('SECRET');
+
+if (isset($_GET['mentos'])) {
+    putenv('CACHE=false');
+}
 
 $url = $_GET['url'] ?? null;
 $urls = $_GET['urls'] ?? [];
@@ -53,10 +56,23 @@ try {
             $result = [];
 
             foreach ($urls as $url) {
+
+                if (isset($result[$url])) {
+                    continue;
+                }
+
                 $post = new Post(
                     $url, $apikey, $secret, $client, $memcachePool
                 );
-                $result[$url] = $post->getFirstMonthTraffic();
+                try {
+                    $result[$url] = [
+                        'payload'=> $post->getFirstMonthTraffic()
+                    ];
+                } catch (\Exception $e) {
+                    $result[$url] = [
+                        'error' => $e->getMessage()
+                    ];
+                }
             }
 
             Output::success($result);
@@ -73,10 +89,23 @@ try {
             $result = [];
 
             foreach ($urls as $url) {
+
+                if (isset($result[$url])) {
+                    continue;
+                }
+
                 $post = new Post(
                     $url, $apikey, $secret, $client, $memcachePool
                 );
-                $result[$url] = $post->getTotalTraffic();
+                try {
+                    $result[$url] = [
+                        'payload'=> $post->getTotalTraffic()
+                    ];
+                } catch (\Exception $e) {
+                    $result[$url] = [
+                        'error' => $e->getMessage()
+                    ];
+                }
             }
 
             Output::success($result);
@@ -93,13 +122,26 @@ try {
             $result = [];
 
             foreach ($urls as $url) {
+
+                if (isset($result[$url])) {
+                    continue;
+                }
+
                 $post = new Post(
                     $url, $apikey, $secret, $client, $memcachePool
                 );
-                $result[$url] = [
-                    'firstMonth' => $post->getFirstMonthTraffic(),
-                    'total' => $post->getTotalTraffic(),
-                ];
+                try {
+                    $result[$url] = [
+                        'payload'=>  [
+                            'firstMonth' => $post->getFirstMonthTraffic(),
+                            'total' => $post->getTotalTraffic(),
+                        ]
+                    ];
+                } catch (\Exception $e) {
+                    $result[$url] = [
+                        'error' => $e->getMessage()
+                    ];
+                }
             }
 
             Output::success($result);

@@ -11,7 +11,8 @@ class Post
     /** day in seconds */
     const DAY = 86400;
 
-    const CACHING = true;
+    /** @var bool  */
+    private $cacheFlag;
 
     /** @var string */
     private $url;
@@ -42,6 +43,8 @@ class Post
         $this->cache = $cache;
         $this->apiKey = $apiKey;
         $this->secret = $secret;
+
+        $this->cacheFlag = getenv('CACHE');
     }
 
     public function getPublishedDate() : Chronos
@@ -50,7 +53,7 @@ class Post
 
         $item = $this->cache->getItem($hash);
 
-        if (!$item->isHit() || self::CACHING === false) {
+        if (!$item->isHit() || $this->cacheFlag === "false") {
             $response = $this->fetch();
             $data = $response['data'][0]['pub_date'];
             $item->set($data);
@@ -91,8 +94,10 @@ class Post
         $decoded = json_decode($bodyContents, true);
 
         if (empty($decoded['data'])) {
+
+            //return ['data' => [['_hits' => 0]]];
             throw new \Exception(
-                "Data is empty - did you pass in a valid URL?"
+                "Data is empty - did you pass in a valid URL? We have ".$this->url
             );
         }
 
@@ -139,7 +144,7 @@ class Post
         $hash = md5($this->url . '-firstmonth');
 
         $item = $this->cache->getItem($hash);
-        if (!$item->isHit() || self::CACHING === false) {
+        if (!$item->isHit() || $this->cacheFlag === "false") {
             $params = [
                 'period_start' => $pubDate->toDateString(),
                 'period_end' => $firstMonth->toDateString(),
@@ -172,7 +177,7 @@ class Post
 
         $item = $this->cache->getItem($hash);
 
-        if (!$item->isHit() || self::CACHING === false) {
+        if (!$item->isHit() || $this->cacheFlag === "false") {
             $params = [
                 'period_start' => $pubDate->toDateString(),
                 'period_end' => Chronos::now()->toDateString(),
